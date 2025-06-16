@@ -9,12 +9,12 @@ async function fetchTransactions() {
     fetching = true;
 
     const urlParams = new URLSearchParams(window.location.search);
-    const address = urlParams.get("addr") || "34xp4vRoCGJym3xR7yCVPFHoCNxv4Twseo"; // استخدام العنوان من الرابط، أو عنوان افتراضي
+    const address = urlParams.get("address") || "34xp4vRoCGJym3xR7yCVPFHoCNxv4Twseo"; // استخدام العنوان من الرابط، أو عنوان افتراضي
     let lastTxId = null;
 
     try {
         let fetchedCount = 0; // عدد المعاملات التي تم جلبها في الدورة الحالية
-        let totalTxCount = 600000; // نحدد العدد الإجمالي للمعاملات في البداية
+        let totalTxCount = 100000; // نحدد العدد الإجمالي للمعاملات في البداية
 
         // استمر في تحميل المعاملات تدريجيًا حتى يتم جلب جميع المعاملات
         while (fetchedCount < totalTxCount) {
