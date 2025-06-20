@@ -1,94 +1,101 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transactions Viewer</title>
-    <style>
-        pre {
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            font-size: 12px;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Transactions Viewer</title>
+  <style>
+    pre {
+      font-size: 12px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      margin: 0;
+      padding: 0;
+    }
+  </style>
 </head>
 <body>
 
-    <div id="result"></div>
-    <script>
-        const processedTxIds = new Set(
-            JSON.parse(localStorage.getItem("processedTxIds") || "[]")
-        ); // استرجاع المعرفات المخزنة مسبقًا
+  <pre id="result">[</pre>
+  <button id="loadMoreBtn">تحميل المزيد</button>
 
-        let fetching = false; // لتجنب بدء تحميل أكثر من مرة في نفس الوقت
+  <script>
+    const processedTxIds = new Set(
+      JSON.parse(localStorage.getItem("processedTxIds") || "[]")
+    );
 
-        async function fetchTransactions() {
-            if (fetching) return;
-            fetching = true;
+    let fetching = false;
+    let isFirst = true; // لتنسيق الفاصلة بين المعاملات
 
-            // استخراج العنوان من مسار بالشكل: /api/address/{address}/txs
-            const pathParts = window.location.pathname.split("/").filter(Boolean);
-            let address = "34xp4vRoCGJym3xR7yCVPFHoCNxv4Twseo"; // العنوان الافتراضي
+    async function fetchTransactions() {
+      if (fetching) return;
+      fetching = true;
 
-            if (
-                pathParts.length >= 4 &&
-                pathParts[0] === "api" &&
-                pathParts[1] === "address" &&
-                pathParts[3] === "txs"
-            ) {
-                address = pathParts[2];
-            }
+      const pathParts = window.location.pathname.split("/").filter(Boolean);
+      let address = "34xp4vRoCGJym3xR7yCVPFHoCNxv4Twseo";
 
-            let lastTxId = null;
+      if (
+        pathParts.length >= 4 &&
+        pathParts[0] === "api" &&
+        pathParts[1] === "address" &&
+        pathParts[3] === "txs"
+      ) {
+        address = pathParts[2];
+      }
 
-            try {
-                let fetchedCount = 0;
-                let totalTxCount = 100000;
+      let lastTxId = null;
 
-                while (fetchedCount < totalTxCount) {
-                    let url = `https://mempool.space/api/address/${address}/txs/chain`;
-                    if (lastTxId) {
-                        url += `/${lastTxId}`;
-                    }
+      try {
+        let fetchedCount = 0;
+        let totalTxCount = 100000;
 
-                    const response = await fetch(url);
-                    if (!response.ok) {
-                        throw new Error(`Error: ${response.statusText}`);
-                    }
+        while (fetchedCount < totalTxCount) {
+          let url = `https://mempool.space/api/address/${address}/txs/chain`;
+          if (lastTxId) {
+            url += `/${lastTxId}`;
+          }
 
-                    const data = await response.json();
-                    if (data.length === 0) break;
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`Error: ${response.statusText}`);
+          }
 
-                    const newTxs = data.filter((tx) => !processedTxIds.has(tx.txid));
-                    newTxs.forEach((tx) => processedTxIds.add(tx.txid));
+          const data = await response.json();
+          if (data.length === 0) break;
 
-                    fetchedCount += newTxs.length;
-                    lastTxId = data[data.length - 1].txid;
+          const newTxs = data.filter((tx) => !processedTxIds.has(tx.txid));
+          newTxs.forEach((tx) => processedTxIds.add(tx.txid));
 
-                    displayTransactions(newTxs);
-                    await new Promise((resolve) => setTimeout(resolve, 1000));
-                }
+          fetchedCount += newTxs.length;
+          lastTxId = data[data.length - 1].txid;
 
-                localStorage.setItem("processedTxIds", JSON.stringify([...processedTxIds]));
-                console.log(`Fetched ${fetchedCount} transactions!`);
-            } catch (error) {
-                console.error("Error fetching transactions:", error);
-            }
-
-            fetching = false;
+          displayTransactions(newTxs);
+          await new Promise((resolve) => setTimeout(resolve, 1000));
         }
 
-        function displayTransactions(txs) {
-            const resultDiv = document.getElementById("result");
-            txs.forEach((tx) => {
-                const txDetails = `<pre>${JSON.stringify(tx, null, 0)}</pre>`;
-                resultDiv.innerHTML += txDetails;
-            });
-        }
+        localStorage.setItem("processedTxIds", JSON.stringify([...processedTxIds]));
+        const resultDiv = document.getElementById("result");
+        resultDiv.innerHTML = resultDiv.innerHTML.replace(/,\s*$/, "]"); // استبدال آخر فاصلة بـ ]
+        console.log(`Fetched ${fetchedCount} transactions!`);
+      } catch (error) {
+        console.error("Error fetching transactions:", error);
+      }
 
-        window.onload = fetchTransactions;
-        document.getElementById("loadMoreBtn")?.addEventListener("click", fetchTransactions);
-    </script>
+      fetching = false;
+    }
+
+    function displayTransactions(txs) {
+      const resultDiv = document.getElementById("result");
+      txs.forEach((tx) => {
+        const json = JSON.stringify(tx);
+        resultDiv.innerHTML += (isFirst ? "" : ",") + "\n" + json;
+        isFirst = false;
+      });
+    }
+
+    window.onload = fetchTransactions;
+    document.getElementById("loadMoreBtn")?.addEventListener("click", fetchTransactions);
+  </script>
 
 </body>
 </html>
